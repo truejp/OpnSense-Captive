@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>WiFi - Lehnet.org</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="favicon.ico"/>	
+	<link rel="stylesheet" type="text/css" href="css/util.css">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+	<link rel="stylesheet" type="text/css" href="css/material-design-iconic-font.min.css">
+	
+	<script src="js/jquery.min.js"></script>
+	<script type="text/javascript" src="js/zone.js"></script>
+
+	<script>
+		function getURLparams()
+		{
+			var vars = [], hash;
+			var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+			for(var i = 0; i < hashes.length; i++)
+			{
+				hash = hashes[i].split('=');
+				vars.push(hash[0]);
+				vars[hash[0]] = hash[1];
+			}
+			return vars;
+		}
+
+		$(document).ready(function() {
+			/**
+			 * logon action
+			 */
+			$("#signin").click(function (event) {
+				event.preventDefault();
+				// hide alerts
+				$("#alertMSG").addClass("hidden");
+				// try to login
+				$.ajax({
+					type: "POST",
+					url: "/api/captiveportal/access/logon/" + zoneid + "/",
+					dataType:"json",
+					data:{ user: $("#inputUsername").val(), password: $("#inputPassword").val() }
+				}).done(function(data) {
+					// redirect on successful login
+					if (data['clientState'] == 'AUTHORIZED') {
+						if (getURLparams()['redirurl'] != undefined) {
+							window.location = 'http://'+getURLparams()['redirurl']+'?refresh';
+						} else {
+							// no target, reload page
+							window.location.reload();
+						}
+					} else {
+						$("#inputUsername").val("");
+						$("#inputPassword").val("");
+						$("#errorMSGtext").html("authentication failed");
+						$("#alertMSG").removeClass("hidden");
+					}
+				}).fail(function(){
+					$("#errorMSGtext").html("unable to connect to authentication server");
+					$("#alertMSG").removeClass("hidden");
+				});
+			});
+
+			/**
+			 * login anonymous, only applicable when server is configured without authentication
+			 */
+			$("#signin_anon").click(function (event) {
+				event.preventDefault();
+				// hide alerts
+				$("#alertMSG").addClass("hidden");
+				// try to login
+				$.ajax({
+					type: "POST",
+					url: "/api/captiveportal/access/logon/" + zoneid + "/",
+					dataType:"json",
+					data:{ user: '', password: '' }
+				}).done(function(data) {
+					// redirect on successful login
+					if (data['clientState'] == 'AUTHORIZED') {
+						if (getURLparams()['redirurl'] != undefined) {
+							window.location = 'http://'+getURLparams()['redirurl']+'?refresh';
+						} else {
+							window.location.reload();
+						}
+					} else {
+						$("#inputUsername").val("");
+						$("#inputPassword").val("");
+						$("#errorMSGtext").html("login failed");
+						$("#alertMSG").removeClass("hidden");
+					}
+				}).fail(function(){
+					$("#errorMSGtext").html("unable to connect to authentication server");
+					$("#alertMSG").removeClass("hidden");
+				});
+			});
+
+			/**
+			 * logoff action
+			 */
+			$("#logoff").click(function (event) {
+				event.preventDefault();
+				// hide alerts
+				$("#alertMSG").addClass("hidden");
+				// try to login
+				$.ajax({
+					type: "POST",
+					url: "/api/captiveportal/access/logoff/" + zoneid + "/",
+					dataType:"json",
+					data:{ user: '', password: '' }
+				}).done(function(data) {
+					// refresh page
+					window.location.reload();
+				}).fail(function(){
+					$("#errorMSGtext").html("unable to connect to authentication server");
+					$("#alertMSG").removeClass("hidden");
+				});
+			});
+
+			/**
+			 * close / hide error message
+			 */
+			$("#btnCloseError").click(function(){
+				$("#alertMSG").addClass("hidden");
+			});
+
+			/**
+			 * execute after pageload
+			 */
+			 $.ajax({
+				 type: "POST",
+				 url: "/api/captiveportal/access/status/" + zoneid + "/",
+				 dataType:"json",
+				 data:{ user: $("#inputUsername").val(), password: $("#inputPassword").val() }
+			 }).done(function(data) {
+				if (data['clientState'] == 'AUTHORIZED') {
+				  $("#logout_frm").removeClass('hidden');
+				} else if (data['authType'] == 'none') {
+					$("#login_none").removeClass('hidden');
+				} else {
+					$("#login_password").removeClass('hidden');
+				}
+			 }).fail(function(){
+				 $("#errorMSGtext").html("unable to connect to authentication server");
+				 $("#alertMSG").removeClass("hidden");
+			 });
+		});
+	</script>
+</head>
+<body>
+	
+	<div class="limiter">
+		<div class="container-login100" style="background-image: url('img/bg-01.jpg');">
+			<div class="wrap-login100 p-l-55 p-r-55 p-t-65 p-b-20">
+
+				<!-- New Auth Endpoint -->
+				<main class="page-content col-sm-6 col-sm-push-3">
+					<span class="login100-form-title">
+						<img src="img/logo_black.png" style="max-width: 90%;">
+					</span>
+
+					<!-- User option 1: login needed with name and password -->
+					<div id="login_password" class="hidden">
+						<form class="login100-form validate-form">
+							<p>Herzlich Willkommen bei Lehnet.org, Betreiber von Firmen wie BL Consulting & Solutions GmbH oder Sky Mapper. Bitte logge dich unten ein!</p>
+							<div id="pw-signin" class="m-t-20">
+								<div class="wrap-input100 validate-input m-b-23" data-validate="Benutzername wird benötigt">
+									<span class="label-input100">Benutzer</span>
+									<input class="input100" type="text" id="inputUsername" name="auth_user" placeholder="Bitte eingeben..." required autofocus>
+									<span class="focus-input100" data-symbol="&#xf206;"></span>
+								</div>
+			
+								<div class="wrap-input100 validate-input" data-validate="Passwort wird benötigt">
+									<span class="label-input100">Passwort</span>
+									<input class="input100" id="inputPassword" type="password" name="auth_pass" placeholder="Bitte eingeben..." required>
+									<span class="focus-input100" data-symbol="&#xf190;"></span>
+								</div>
+								<!-- TODO: Add Voucher System -->
+								<!-- <a href="#" style="font-size: 10px; color: gray;" onclick="voucher()">Oder WiFi Code?</a> -->
+							</div>
+							
+							<div class="container-login100-form-btn m-t-30 p-b-20">
+								<div class="wrap-login100-form-btn">
+									<div class="login100-form-bgbtn"></div>
+									<input type="submit" id="signin" class="login100-form-btn" value="Sign in">
+								</div>
+							</div>
+
+
+						</form>
+					</div>
+					<!-- User option 2: login needed, without username, password -->
+					<div id="login_none" class="hidden">
+						<form class="login100-form validate-form">
+							<p>Sample Text, you shouldn't be able to see this LOL</p>
+							<div class="container-login100-form-btn m-t-30 p-b-20">
+								<div class="wrap-login100-form-btn">
+									<div class="login100-form-bgbtn"></div>
+									<input type="submit" id="signin_anon" class="login100-form-btn" value="Anonymous Login">
+								</div>
+							</div>
+					  	</form>
+					</div>
+					<!-- User option 3: Already logged in, show logout button -->
+					<div id="logout_frm" class="hidden">
+						<p>Du bist mit dem Internet und den internen Services von Lehnet.org verbunden. Um die Verbindung sicher zu trennen, kannst du jederzeit den Logout-Button verwenden.</p>
+					  	<form class="login100-form validate-form m-t-30">
+							<div class="validate-input m-b-23">
+								<div class="wrap-login100-form-btn">
+									<div class="login100-form-bgbtn"></div>
+									<input type="submit" id="logoff" class="login100-form-btn" value="Logout">
+								</div>
+							</div>
+					  	</form>
+					</div>
+					<!-- Message dialog -->
+					<div class="alert alert-danger alert-dismissible hidden" role="alert" id="alertMSG">
+						<div class="wrap-input100 validate-input m-b-23">
+							<button type="button" class="close input100" id="btnCloseError" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							<span id="errorMSGtext"></span>
+						</div>
+					</div>
+				  </main>
+				  <p class="copyright"><a href="https://lehnet.org">Copyright &copy; <script>document.write(new Date().getFullYear());</script> Philipp Lehnet</a></p>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
